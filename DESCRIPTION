@@ -1,14 +1,28 @@
 Package: STAT302package
-Title: T-Test, Fit Linear Models, and Cross-Validation.
+Title: T-Test, Fit Linear Models, and Cross-Validation
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Anita",
            family = "Silva",
            role = c("aut", "cre"),
-           email = "anitasil460@gmail.com"
+           email = "anitasil460@gmail.com")
 Description: This package has pre-created functions for t-test, fitting linear models, and cross validation using k-nearest neighbors and random trees.
 License: GPL-3
+Imports: 
+    tibble,
+    class,
+    randomForest,
+    gapminder,
+    palmerpenguins,
+    qpdf,
+    dplyr
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)

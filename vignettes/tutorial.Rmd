@@ -1,0 +1,156 @@
+---
+title: "Project 3: STAT302package Tutorial"
+author: "Anita Silva"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{STAT302package Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=FALSE, warning=FALSE}
+library(STAT302package)
+library(dplyr)
+library(ggplot2)
+library(class)
+```
+
+This package contains four function, `my_lm`, `my_t.test`, `my_knn_cv`, and `my_rf_cv`. `my_lm` is a function that does linear model fitting. `my_t.test` is a function that runs t-test on given data. `my_knn_cv` and `my_rf_cv` runs cross-validation where `my_knn_cv` uses k-nearest neighbors algorithm and `my_rf_cv` uses random forest algorithm.
+
+How to install the package form github:
+
+```{r eval = FALSE}
+devtools::install_github("LeelooE/STAT302package", build_vignette = TRUE, build_opts = c())
+library(STAT302package)
+# Use this to view the vignette in the STAT302package HTML help
+help(package = "STAT302package", help_type = "html")
+# Use this to view the vignette as an isolated HTML file
+utils::browseVignettes(package = "STAT302package")
+```
+
+### How to use `my_t.test`:
+
+The `my_t.test` function takes in three different types for it's `alternative` input which are "two.sided", "greater", and "less". "two.sided" is the default. Knowing this we can use this function to run a t-test for three kinds of scenarios. For each of the following scenarios we know our null hypothesis which we always assume to be true and this is the value we will use for input `mu` of `my_t.test`. In these examples I will use the lifeExp data from `my_gapminder`. 
+
+```{r}
+# setting up lifeExp as variable x
+x <- my_gapminder$lifeExp
+```
+
+First scenario is if we have a null hypothesis that $\mathbf{μ}$ equals 60 and our alternative hypothesis is that $\mathbf{μ}$ does not equal 60. In this case we would want to set `alternative` to "two.sided" because we want to test if the mean is significant less and if the mean is significantly greater than 60.
+
+```{r}
+# Setting mu to 60 since that is what mu equals in our null hypothesis for this and the next two examples
+mu = 60
+# Running a two sided t-test
+two_sided <- my_t.test(x, alternative="two.sided", mu)
+two_sided
+```
+
+Using a p-value cutoff of α=0.05, we can see that the p-value we got from the two sided t-test is actually 0.09. Since the p-value > α, we can not reject our null hypothesis in favor of the alternative hypothesis because there is no evidence to support that $\mathbf{μ}$ does not equal 60.
+
+Second scenario is if we have a null hypothesis that $\mathbf{μ}$ equals 60 and our alternative hypothesis is that $\mathbf{μ}$ less than 60. In this case we would want to set `alternative` to "less" because we want to test if the mean is significant less than 60.
+
+```{r}
+# Running a one sided t-test
+less <- my_t.test(x, alternative="less", mu)
+less
+```
+
+Using a p-value cutoff of α=0.05, we can see that the p-value we got from the one sided t-test above is actually 0.046. Since the p-value < α, we can reject our null hypothesis in favor of the alternative hypothesis because there is evidence to support that $\mathbf{μ}$ is less than 60.
+
+Third scenario is if we have a null hypothesis that $\mathbf{μ}$ equals 60 and our alternative hypothesis is that $\mathbf{μ}$ greater than 60. In this case we would want to set `alternative` to "greater" because we want to test if the mean is significant greater than 60.
+
+```{r}
+# Running a one sided t-test
+greater <- my_t.test(x, alternative="greater", mu)
+greater
+```
+
+Using a p-value cutoff of α=0.05, we can see that the p-value we got from the one sided t-test above is actually 0.95. Since the p-value > α, we can not reject our null hypothesis in favor of the alternative hypothesis because there is no evidence to support that $\mathbf{μ}$ is greater than 60.
+
+### How to use `my_lm`:
+
+The `my_lm` function takes in two inputs `fromula` and `data`. In this example use of `my_lm` for `data` I will be using the lifeExp, gdpPercap, and continent from the `my_gapminder`. The `fromula` will be `lifeExp ~ gdpPercap + continent` where the lifeExp variable is the response and gdpPercap and continent are the explanatory variables.
+
+```{r}
+# initiating needed data frame using my_gapminder
+data <- na.omit(my_gapminder %>% select(lifeExp, gdpPercap, continent))
+
+# running my_lm
+result <- my_lm(lifeExp ~ gdpPercap + continent, data)
+result
+```
+
+From the results we got above, we can see that gdpPercap coefficient estimate is .000445 which the value of how gdpPercap effects lifeExp based on the data we used. This means for every increase of unit for lifeExp the gdpPercap goes up by .000445. 
+
+When we ran `my_lm` we did a hypothesis test for each coefficient and the results are reflected in the output of the funciton above. For example, with gdpPercap coefficient our null hypothesis was that there is no relationship between gdpPercap and lifeExp. The alternative hypothesis in this case would be that there is a relationship between these two. Using a p-value cutoff of α=0.05. The Pr(>|t|) is the probability of us seeing a value that is larger than or equal to the t value we were also given by the `my_lm` function as seen in the table above. We have a Pr(>|t|) or p-value that is less than .05, and t value of 18.9. Given this data we can reject the null hypothesis in favor of the alternative that there is a relationship between gdpPercap and lifeExp.
+
+We can see how the actual values in the data we used compare to the linear model fit we created below. Where the formula we used was `lifeExp ~ gdpPercap + continent`.
+
+```{r}
+# We take only the estimates we created in the linear model ft 
+my_estimates <- as.matrix(result[,"Estimate"])
+
+# fitting data into matrix to create x matrix
+x_mat <- model.matrix(lifeExp ~ gdpPercap + continent, data)
+
+# matrix multiplication to get yhat 
+yhat <- x_mat %*% my_estimates
+
+# matrix sum to get yobs
+yobs <- rowSums(x_mat)
+
+data$obs = yobs
+data$pred = yhat
+ggplot(data, aes(x = obs, y = lifeExp)) +
+  geom_point(color='blue') +
+  geom_line(col = "red", data = data, aes(x = pred, y = lifeExp)) +
+  ggtitle("Actual vs. Fitted values") +
+  theme_bw(base_size = 11) +
+  labs(y = "lifeExp", x = "gdpPercap + continent")
+
+```
+
+Above we can see the blue dots indicating the actual data we used, and red is the model fit we got from `my_lm`. We can see that the model fit line is at the very left side in comparison to the rest of the actual data points. This tells us that maybe the model fit does not fully capture how the variables in the data effect each other. There seems to be a small curve in the overall data points seen which may suggest that something more is at play here. We can definitely see that maybe our model fit is not the best and more analysis and experimentation with other variables of my_gapminder would be useful to find a bettering fitting model.
+
+### How to use `my_knn_cv`:
+
+```{r}
+k_cv = 5
+data <- na.omit(my_penguins)
+train <- data[, c("bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g")]
+cl <- data[, c("species")]
+
+trainingErrors <- numeric(0)
+CVs <- numeric(0)
+
+for (i in 1:10) {
+  return_list <- my_knn_cv(train, cl, i, k_cv)
+  cv_err <- return_list[2]
+  CVs <- c(CVs, cv_err)
+  bool_vec <- return_list[[1]] == cl$species
+  wrong <- length(bool_vec[bool_vec == FALSE])
+  train_err <- (wrong) / length(cl$species)
+  trainingErrors <- c(trainingErrors, train_err)
+}
+
+values  <- c(trainingErrors, CVs)
+
+t <- matrix(values, ncol=2, byrow=TRUE)
+colnames(t) <- c("Train_Error", "Cross_Validation_Error")
+rownames(t) <- c("k_nn=1", "k_nn=2", "k_nn=3", "k_nn=4", 
+                 "k_nn=5", "k_nn=6", "k_nn=7", "k_nn=8", 
+                 "k_nn=9", "k_nn=10")
+t
+```
+
+
+
